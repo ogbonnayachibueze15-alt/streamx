@@ -3,77 +3,57 @@ document.addEventListener("DOMContentLoaded", function() {
   const searchInput = document.getElementById("search");
   const searchBtn = document.getElementById("searchBtn");
 
-  const videoModal = document.getElementById("video-modal");
-  const player = document.getElementById("player");
-  const downloadLink = document.getElementById("download-link");
-  const closeVideo = document.getElementById("close-video");
-
-  // Example movies with sample MP4 URLs
-  const movies = [
-    {
-      title: "Sample Movie 1",
-      image: "https://via.placeholder.com/200x300.png?text=Movie+1",
-      video: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4"
-    },
-    {
-      title: "Sample Movie 2",
-      image: "https://via.placeholder.com/200x300.png?text=Movie+2",
-      video: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4"
-    },
-    {
-      title: "Sample Movie 3",
-      image: "https://via.placeholder.com/200x300.png?text=Movie+3",
-      video: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4"
-    },
-    {
-      title: "Sample Movie 4",
-      image: "https://via.placeholder.com/200x300.png?text=Movie+4",
-      video: "https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4"
-    }
-  ];
-
-  // Show movies
-  function showMovies(list) {
+  // Load default movies from TVMaze API
+  async function loadMovies() {
     trendingContainer.innerHTML = "";
-    list.forEach(movie => {
-      const movieDiv = document.createElement("div");
-      movieDiv.classList.add("movie");
+    try {
+      const res = await fetch("https://api.tvmaze.com/shows");
+      const data = await res.json();
 
-      movieDiv.innerHTML = `<img src="${movie.image}" alt="${movie.title}">`;
-
-      // Play movie on click
-      movieDiv.addEventListener("click", () => {
-        player.src = movie.video;
-        downloadLink.href = movie.video;
-        videoModal.style.display = "flex";
-        player.play();
+      data.slice(0, 20).forEach(movie => {
+        if (movie.image) {
+          const img = document.createElement("img");
+          img.src = movie.image.medium;
+          img.alt = movie.name;
+          img.classList.add("movie");
+          trendingContainer.appendChild(img);
+        }
       });
-
-      trendingContainer.appendChild(movieDiv);
-    });
+    } catch (err) {
+      trendingContainer.innerHTML = "<p>Failed to load movies.</p>";
+      console.error(err);
+    }
   }
 
-  showMovies(movies);
+  loadMovies();
 
-  // Search
-  searchBtn.addEventListener("click", () => {
-    const query = searchInput.value.trim().toLowerCase();
+  // Search functionality
+  searchBtn.addEventListener("click", async function() {
+    const query = searchInput.value.trim();
     if (!query) return;
 
-    const filtered = movies.filter(m => m.title.toLowerCase().includes(query));
-    showMovies(filtered);
-  });
+    trendingContainer.innerHTML = "";
+    try {
+      const res = await fetch(`https://api.tvmaze.com/search/shows?q=${query}`);
+      const data = await res.json();
 
-  // Close video
-  closeVideo.addEventListener("click", () => {
-    player.pause();
-    videoModal.style.display = "none";
-  });
+      if (data.length === 0) {
+        trendingContainer.innerHTML = "<p>No results found.</p>";
+        return;
+      }
 
-  window.addEventListener("click", e => {
-    if (e.target == videoModal) {
-      player.pause();
-      videoModal.style.display = "none";
+      data.forEach(item => {
+        if (item.show.image) {
+          const img = document.createElement("img");
+          img.src = item.show.image.medium;
+          img.alt = item.show.name;
+          img.classList.add("movie");
+          trendingContainer.appendChild(img);
+        }
+      });
+    } catch (err) {
+      trendingContainer.innerHTML = "<p>Search failed.</p>";
+      console.error(err);
     }
   });
 });
